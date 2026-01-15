@@ -12,6 +12,23 @@ dist
 dist-ssr
 *.local
 
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Environment variables
+.env
+.env*.local
+
+# Testing
+coverage
+.nyc_output
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
