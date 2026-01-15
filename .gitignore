@@ -35,11 +35,18 @@ lerna-debug.log*
 .env.production.local
 *.local
 
-# Vercel
-.vercel
+# Next.js
+.next/
+out/
 
-# TypeScript
-*.tsbuildinfo
+# Testing
+coverage/
+test.db
+.env.test.local
+
+# Database
+*.db
+*.db-journal
 
 # Editor directories and files
 .vscode/*

@@ -18,6 +18,12 @@
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
+  "pnpm": {
+    "overrides": {
+      "jsdom": "^27.4.0",
+      "test-exclude": "^7.0.1"
+    }
+  },
   "dependencies": {
     "@hello-pangea/dnd": "^17.0.0",
     "@hookform/resolvers": "^3.10.0",
