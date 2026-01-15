@@ -1,0 +1,555 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// 使用者相關
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  name          String?
+  image         String?
+  phone         String?
+  timezone      String    @default("Asia/Taipei")
+  currency      String    @default("TWD")
+  locale        String    @default("zh-TW")
+  
+  businessName    String?
+  businessEmail   String?
+  businessPhone   String?
+  businessAddress String?
+  taxId           String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  accounts       Account[]
+  sessions       Session[]
+  clients        Client[]
+  projects       Project[]
+  tasks          Task[]
+  invoices       Invoice[]
+  communications Communication[]
+  activities     Activity[]
+  subscription   Subscription?
+  settings       Setting?
+  tags           Tag[]
+  
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// 客戶相關
+// ============================================
+
+model Client {
+  id          String       @id @default(cuid())
+  userId      String
+  
+  name        String
+  email       String?
+  phone       String?
+  company     String?
+  website     String?
+  
+  address     String?
+  city        String?
+  state       String?
+  postalCode  String?
+  country     String?      @default("Taiwan")
+  
+  status      ClientStatus @default(LEAD)
+  source      String?
+  notes       String?      @db.Text
+  
+  currency     String  @default("TWD")
+  paymentTerms Int     @default(30)
+  creditLimit  Decimal? @db.Decimal(12, 2)
+  
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+  
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projects       Project[]
+  tasks          Task[]
+  invoices       Invoice[]
+  communications Communication[]
+  tags           TagsOnClients[]
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("clients")
+}
+
+enum ClientStatus {
+  LEAD
+  PROSPECT
+  ACTIVE
+  COMPLETED
+  ON_HOLD
+  CHURNED
+}
+
+// ============================================
+// 專案相關
+// ============================================
+
+model Project {
+  id          String        @id @default(cuid())
+  userId      String
+  clientId    String
+  
+  name        String
+  description String?       @db.Text
+  
+  status      ProjectStatus @default(PLANNING)
+  priority    Priority      @default(MEDIUM)
+  
+  startDate   DateTime?
+  dueDate     DateTime?
+  completedAt DateTime?
+  
+  budget         Decimal? @db.Decimal(12, 2)
+  currency       String   @default("TWD")
+  hourlyRate     Decimal? @db.Decimal(10, 2)
+  estimatedHours Float?
+  trackedHours   Float    @default(0)
+  
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+  
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client   Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tasks    Task[]
+  invoices Invoice[]
+  tags     TagsOnProjects[]
+  
+  @@index([userId])
+  @@index([clientId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  ON_HOLD
+  IN_REVIEW
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ============================================
+// 任務相關
+// ============================================
+
+model Task {
+  id          String     @id @default(cuid())
+  userId      String
+  projectId   String?
+  clientId    String?
+  
+  title       String
+  description String?    @db.Text
+  
+  status   TaskStatus @default(TODO)
+  priority Priority   @default(MEDIUM)
+  
+  dueDate     DateTime?
+  completedAt DateTime?
+  
+  estimatedMinutes Int?
+  trackedMinutes   Int  @default(0)
+  sortOrder        Int  @default(0)
+  reminderAt       DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  client  Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([projectId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+// ============================================
+// 發票相關
+// ============================================
+
+model Invoice {
+  id           String        @id @default(cuid())
+  userId       String
+  clientId     String
+  projectId    String?
+  
+  invoiceNumber String       @unique
+  status        InvoiceStatus @default(DRAFT)
+  
+  issueDate DateTime @default(now())
+  dueDate   DateTime
+  paidAt    DateTime?
+  
+  subtotal   Decimal @db.Decimal(12, 2) @default(0)
+  taxRate    Decimal @db.Decimal(5, 2)  @default(0)
+  taxAmount  Decimal @db.Decimal(12, 2) @default(0)
+  discount   Decimal @db.Decimal(12, 2) @default(0)
+  total      Decimal @db.Decimal(12, 2) @default(0)
+  amountPaid Decimal @db.Decimal(12, 2) @default(0)
+  currency   String  @default("TWD")
+  
+  notes  String? @db.Text
+  terms  String? @db.Text
+  footer String? @db.Text
+  
+  stripeInvoiceId     String?
+  stripePaymentIntent String?
+  stripePaymentUrl    String?
+  
+  sentAt    DateTime?
+  viewedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client   Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project  Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  items    InvoiceItem[]
+  payments Payment[]
+  
+  @@index([userId])
+  @@index([clientId])
+  @@index([status])
+  @@index([issueDate])
+  @@index([dueDate])
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PAID
+  PARTIAL
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+model InvoiceItem {
+  id        String @id @default(cuid())
+  invoiceId String
+  
+  description String
+  quantity    Decimal @db.Decimal(10, 2) @default(1)
+  unitPrice   Decimal @db.Decimal(12, 2)
+  amount      Decimal @db.Decimal(12, 2)
+  sortOrder   Int     @default(0)
+  
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+model Payment {
+  id        String @id @default(cuid())
+  invoiceId String
+  
+  amount   Decimal       @db.Decimal(12, 2)
+  currency String        @default("TWD")
+  method   PaymentMethod @default(BANK_TRANSFER)
+  reference String?
+  
+  stripePaymentId String?
+  notes           String?
+  
+  paidAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+  
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CREDIT_CARD
+  CASH
+  CHECK
+  PAYPAL
+  STRIPE
+  OTHER
+}
+
+// ============================================
+// 溝通記錄
+// ============================================
+
+model Communication {
+  id       String            @id @default(cuid())
+  userId   String
+  clientId String
+  
+  type       CommunicationType
+  subject    String?
+  content    String?           @db.Text
+  occurredAt DateTime          @default(now())
+  attachments String[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([clientId])
+  @@index([occurredAt])
+  @@map("communications")
+}
+
+enum CommunicationType {
+  EMAIL
+  PHONE_CALL
+  VIDEO_CALL
+  IN_PERSON
+  MESSAGE
+  NOTE
+}
+
+// ============================================
+// 標籤系統
+// ============================================
+
+model Tag {
+  id     String @id @default(cuid())
+  userId String
+  name   String
+  color  String @default("#6366f1")
+  
+  createdAt DateTime @default(now())
+  
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clients  TagsOnClients[]
+  projects TagsOnProjects[]
+  
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("tags")
+}
+
+model TagsOnClients {
+  clientId String
+  tagId    String
+  
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@id([clientId, tagId])
+  @@map("tags_on_clients")
+}
+
+model TagsOnProjects {
+  projectId String
+  tagId     String
+  
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@id([projectId, tagId])
+  @@map("tags_on_projects")
+}
+
+// ============================================
+// 活動日誌
+// ============================================
+
+model Activity {
+  id     String @id @default(cuid())
+  userId String
+  
+  action     ActivityAction
+  entityType EntityType
+  entityId   String
+  entityName String?
+  metadata   Json?
+  
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activities")
+}
+
+enum ActivityAction {
+  CREATED
+  UPDATED
+  DELETED
+  ARCHIVED
+  RESTORED
+  STATUS_CHANGED
+  SENT
+  VIEWED
+  PAID
+}
+
+enum EntityType {
+  CLIENT
+  PROJECT
+  TASK
+  INVOICE
+  COMMUNICATION
+}
+
+// ============================================
+// 訂閱相關
+// ============================================
+
+model Subscription {
+  id     String @id @default(cuid())
+  userId String @unique
+  
+  plan   SubscriptionPlan   @default(FREE)
+  status SubscriptionStatus @default(ACTIVE)
+  
+  stripeCustomerId     String? @unique
+  stripeSubscriptionId String? @unique
+  stripePriceId        String?
+  
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean   @default(false)
+  
+  clientsCount      Int      @default(0)
+  invoicesThisMonth Int      @default(0)
+  lastInvoiceReset  DateTime @default(now())
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("subscriptions")
+}
+
+enum SubscriptionPlan {
+  FREE
+  SOLO
+  PRO
+  AGENCY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
+  TRIALING
+}
+
+// ============================================
+// 系統設定
+// ============================================
+
+model Setting {
+  id     String @id @default(cuid())
+  userId String @unique
+  
+  invoicePrefix       String  @default("INV")
+  invoiceNextNumber   Int     @default(1)
+  defaultPaymentTerms Int     @default(30)
+  defaultTaxRate      Decimal @db.Decimal(5, 2) @default(0)
+  invoiceNotes        String? @db.Text
+  invoiceTerms        String? @db.Text
+  invoiceFooter       String? @db.Text
+  
+  emailNotifications Boolean @default(true)
+  reminderDaysBefore Int     @default(3)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("settings")
+}
