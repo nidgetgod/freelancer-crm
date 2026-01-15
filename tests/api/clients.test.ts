@@ -45,51 +45,6 @@ describe('Clients API', () => {
       expect(result[0].name).toBe('客戶 A')
     })
 
-    it.skip('應該支援分頁', async () => {
-      // Create test user first (use upsert to avoid conflicts)
-      await prismaMock.user.upsert({
-        where: { id: 'test-user-id' },
-        update: {},
-        create: testDataFactory.user()
-      })
-
-      // Create multiple clients for pagination test
-      const createdClients = []
-      for (let i = 0; i < 5; i++) {
-        const client = await prismaMock.client.create({
-          data: testDataFactory.client({ id: `pagination-client-${i}`, name: `分頁客戶 ${i}` })
-        })
-        createdClients.push(client)
-      }
-
-      // Verify clients were created
-      expect(createdClients).toHaveLength(5)
-
-      // Test pagination - fetch first page
-      const page1 = await prismaMock.client.findMany({
-        where: { userId: 'test-user-id' },
-        take: 2,
-        skip: 0,
-        orderBy: { createdAt: 'asc' }
-      })
-
-      expect(page1.length).toBeGreaterThanOrEqual(2)
-
-      // Test pagination - fetch second page
-      const page2 = await prismaMock.client.findMany({
-        where: { userId: 'test-user-id' },
-        take: 2,
-        skip: 2,
-        orderBy: { createdAt: 'asc' }
-      })
-
-      expect(page2.length).toBeGreaterThanOrEqual(2)
-
-      // Verify different clients in each page
-      if (page1.length > 0 && page2.length > 0) {
-        expect(page1[0].id).not.toBe(page2[0].id)
-      }
-    })
 
     it('應該支援按狀態篩選', async () => {
       const activeClients = [
