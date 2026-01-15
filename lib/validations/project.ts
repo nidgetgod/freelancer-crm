@@ -18,8 +18,8 @@ export const ProjectStatus = z.enum([
 // 優先級列舉
 export const Priority = z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT'])
 
-// 建立專案 Schema
-export const createProjectSchema = z.object({
+// 建立專案 Schema (base schema without refinements)
+const baseProjectSchema = z.object({
   clientId: z.string().min(1, '請選擇客戶'),
   name: z.string().min(1, '請輸入專案名稱').max(200, '專案名稱不能超過 200 字'),
   description: z.string().max(5000, '描述不能超過 5000 字').optional().nullable(),
@@ -32,7 +32,10 @@ export const createProjectSchema = z.object({
   hourlyRate: z.number().min(0, '時薪不能為負數').optional().nullable(),
   estimatedHours: z.number().min(0, '預估時數不能為負數').optional().nullable(),
   tagIds: z.array(z.string()).optional(),
-}).refine(
+})
+
+// 建立專案 Schema with refinement
+export const createProjectSchema = baseProjectSchema.refine(
   (data) => {
     if (data.startDate && data.dueDate) {
       return data.startDate <= data.dueDate
@@ -46,7 +49,7 @@ export const createProjectSchema = z.object({
 )
 
 // 更新專案 Schema
-export const updateProjectSchema = createProjectSchema.partial().omit({ clientId: true })
+export const updateProjectSchema = baseProjectSchema.partial().omit({ clientId: true })
 
 // 更新專案狀態 Schema
 export const updateProjectStatusSchema = z.object({
