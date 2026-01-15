@@ -12,6 +12,19 @@ dist
 dist-ssr
 *.local
 
+# Next.js
+.next/
+out/
+
+# Testing
+coverage/
+test.db
+.env.test.local
+
+# Database
+*.db
+*.db-journal
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
