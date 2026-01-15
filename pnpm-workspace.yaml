@@ -3,3 +3,6 @@ ignoredBuiltDependencies:
   - '@prisma/engines'
   - prisma
   - unrs-resolver
+
+overrides:
+  diff@<8.0.3: '>=8.0.3'
