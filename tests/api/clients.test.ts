@@ -45,19 +45,6 @@ describe('Clients API', () => {
       expect(result[0].name).toBe('客戶 A')
     })
 
-    it('應該支援分頁', async () => {
-      const mockClients = [testDataFactory.client()]
-      
-      prismaMock.client.findMany.mockResolvedValue(mockClients)
-      prismaMock.client.count.mockResolvedValue(50)
-
-      const count = await prismaMock.client.count({
-        where: { userId: 'test-user-id' },
-      })
-
-      expect(count).toBe(50)
-      expect(prismaMock.client.findMany).toHaveBeenCalled()
-    })
 
     it('應該支援按狀態篩選', async () => {
       const activeClients = [

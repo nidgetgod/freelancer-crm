@@ -1,9 +1,15 @@
 /**
  * React Hooks Tests
  * 自定義 Hooks 測試
- * 
+ *
  * 注意：這些測試需要 @testing-library/react-hooks 或 React 18 的 renderHook
+ * @jest-environment jsdom
  */
+
+// Polyfill setImmediate for jsdom
+if (typeof setImmediate === 'undefined') {
+  global.setImmediate = (fn: (...args: any[]) => void, ...args: any[]) => setTimeout(fn, 0, ...args) as any
+}
 
 // 模擬 React 環境
 const mockQueryClient = {

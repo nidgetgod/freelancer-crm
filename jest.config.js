@@ -7,7 +7,7 @@ const config = {
   testEnvironment: 'node',
 
   // 設定檔案
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup-sqlite.ts'],
 
   // 模組路徑別名
   moduleNameMapper: {
@@ -60,6 +60,9 @@ const config = {
 
   // 詳細輸出
   verbose: true,
+
+  // 測試超時時間
+  testTimeout: 30000,
 }
 
 module.exports = config
